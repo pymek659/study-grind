@@ -158,7 +158,30 @@ body::before{content:'';position:fixed;top:-20vh;left:50%;transform:translateX(-
 #toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border2);border-left:3px solid var(--green);border-radius:12px;padding:13px 18px;font-size:0.85rem;font-weight:500;z-index:1000;transform:translateX(130%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);max-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.4)}
 #toast.show{transform:translateX(0)}
 #toast.err{border-left-color:var(--pink)}
-@media(max-width:520px){.racer-bar-wrap{display:none}.race-card{padding:20px 16px 18px}.topbar{padding:0 16px}.page{padding:20px 14px}.nav{padding:0 14px}}
+/* ── TIMER ── */
+.timer-card{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:36px 28px;margin-bottom:24px;text-align:center;position:relative;overflow:hidden}
+.timer-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(63,185,80,0.06),transparent 65%);pointer-events:none}
+.timer-subject-row{display:flex;gap:10px;margin-bottom:32px;justify-content:center}
+.timer-subject-row input{flex:1;max-width:280px;background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:0.93rem;outline:none;transition:border-color .2s,box-shadow .2s;text-align:left}
+.timer-subject-row input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(63,185,80,0.12)}
+.timer-subject-row input:disabled{opacity:.5;cursor:not-allowed}
+.timer-display{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:clamp(3.5rem,12vw,6rem);letter-spacing:-0.02em;line-height:1;margin-bottom:10px;transition:color .3s}
+.timer-display.running{color:var(--green)}
+.timer-display.paused{color:var(--yellow)}
+.timer-display.idle{color:var(--muted2)}
+.timer-status{font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:32px;height:18px}
+.timer-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-start{background:var(--green);color:#0d1117;min-width:140px}
+.btn-start:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 6px 20px rgba(63,185,80,0.3)}
+.btn-pause{background:var(--yellow);color:#0d1117;min-width:140px}
+.btn-pause:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.btn-stop{background:#3d1a1a;color:var(--pink);border:1px solid rgba(255,123,114,0.3);min-width:120px}
+.btn-stop:hover{background:var(--pink);color:#fff}
+.timer-elapsed-note{margin-top:20px;font-size:0.8rem;color:var(--muted);min-height:20px}
+.timer-history{display:flex;flex-direction:column;gap:8px}
+.timer-hist-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.timer-tag{font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;background:rgba(63,185,80,0.12);color:var(--green);border:1px solid rgba(63,185,80,0.25);padding:2px 8px;border-radius:100px;font-weight:700;flex-shrink:0}
+@media(max-width:520px){.racer-bar-wrap{display:none}.race-card{padding:20px 16px 18px}.topbar{padding:0 16px}.page{padding:20px 14px}.nav{padding:0 14px}.timer-display{font-size:3.2rem}.timer-card{padding:28px 16px}}
 </style>
 </head>
 <body>
@@ -227,6 +250,7 @@ body::before{content:'';position:fixed;top:-20vh;left:50%;transform:translateX(-
 
     <div class="nav">
       <button class="nav-btn active" data-p="race" onclick="goPage('race')">🏁 Race</button>
+      <button class="nav-btn" data-p="timer" onclick="goPage('timer')">⏱ Timer</button>
       <button class="nav-btn" data-p="log" onclick="goPage('log')">＋ Log</button>
       <button class="nav-btn" data-p="goals" onclick="goPage('goals')">🎯 Goals</button>
       <button class="nav-btn" data-p="profile" onclick="goPage('profile')">👤 Profile</button>
@@ -234,6 +258,28 @@ body::before{content:'';position:fixed;top:-20vh;left:50%;transform:translateX(-
 
     <div class="page show" id="page-race">
       <div id="race-out"><div class="loading-inline"><div class="spin"></div>Loading race…</div></div>
+    </div>
+
+    <!-- TIMER PAGE -->
+    <div class="page" id="page-timer">
+      <div class="timer-card">
+        <div class="timer-subject-row">
+          <input id="t-subj" type="text" placeholder="What are you studying? e.g. Economics"/>
+        </div>
+        <div class="timer-display idle" id="t-display">00:00:00</div>
+        <div class="timer-status" id="t-status">Ready to grind</div>
+        <div class="timer-btns">
+          <button class="btn btn-start" id="t-start-btn" onclick="timerStart()">▶ Start</button>
+          <button class="btn btn-pause" id="t-pause-btn" onclick="timerPause()" style="display:none">⏸ Pause</button>
+          <button class="btn btn-stop" id="t-stop-btn" onclick="timerStop()" style="display:none">⏹ Save & Stop</button>
+        </div>
+        <div class="timer-elapsed-note" id="t-note"></div>
+      </div>
+
+      <div class="sec-head">
+        <div class="sec-title">Today's Timer Sessions</div>
+      </div>
+      <div id="timer-history-out"></div>
     </div>
 
     <div class="page" id="page-log">
@@ -464,10 +510,170 @@ window.goPage = function(p) {
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.toggle('active', el.dataset.p === p));
   document.getElementById('page-' + p).classList.add('show');
   if (p === 'race')    loadRace();
+  else if (p === 'timer')   loadTimerHistory();
   else if (p === 'log')     loadSessions();
   else if (p === 'goals')   loadGoals();
   else if (p === 'profile') loadProfile();
 };
+
+// ── TIMER ──────────────────────────────────────────────────────
+let timerInterval  = null;
+let timerStart_ts  = null;   // Date.now() when last resumed
+let timerElapsed   = 0;      // accumulated ms before current run
+let timerRunning   = false;
+let timerPaused    = false;
+
+function timerTick() {
+  const total = timerElapsed + (Date.now() - timerStart_ts);
+  document.getElementById('t-display').textContent = msToHMS(total);
+}
+
+function msToHMS(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return [h, m, sec].map(v => String(v).padStart(2, '0')).join(':');
+}
+
+function msToHrs(ms) {
+  return Math.round((ms / 3600000) * 100) / 100;  // round to 2dp
+}
+
+window.timerStart = function() {
+  const subj = document.getElementById('t-subj').value.trim();
+  if (!subj) {
+    document.getElementById('t-subj').focus();
+    toast('Enter what you\'re studying first!', true);
+    return;
+  }
+  timerStart_ts = Date.now();
+  timerRunning  = true;
+  timerPaused   = false;
+  timerInterval = setInterval(timerTick, 1000);
+
+  document.getElementById('t-subj').disabled = true;
+  document.getElementById('t-display').className = 'timer-display running';
+  document.getElementById('t-status').textContent = 'Studying…';
+  document.getElementById('t-start-btn').style.display = 'none';
+  document.getElementById('t-pause-btn').style.display = '';
+  document.getElementById('t-stop-btn').style.display  = '';
+  document.getElementById('t-note').textContent = '';
+  timerTick();
+};
+
+window.timerPause = function() {
+  if (!timerRunning || timerPaused) {
+    // Resume
+    timerStart_ts = Date.now();
+    timerPaused   = false;
+    timerRunning  = true;
+    timerInterval = setInterval(timerTick, 1000);
+    document.getElementById('t-display').className = 'timer-display running';
+    document.getElementById('t-status').textContent = 'Studying…';
+    document.getElementById('t-pause-btn').textContent = '⏸ Pause';
+    document.getElementById('t-note').textContent = '';
+  } else {
+    // Pause
+    timerElapsed += Date.now() - timerStart_ts;
+    clearInterval(timerInterval);
+    timerPaused  = true;
+    timerRunning = false;
+    document.getElementById('t-display').className = 'timer-display paused';
+    document.getElementById('t-status').textContent = 'Paused';
+    document.getElementById('t-pause-btn').textContent = '▶ Resume';
+    document.getElementById('t-note').textContent = 'Paused — hit Resume to keep going, or Save & Stop to finish.';
+  }
+};
+
+window.timerStop = async function() {
+  if (!timerStart_ts && timerElapsed === 0) return;
+
+  // Accumulate any remaining running time
+  if (timerRunning && !timerPaused) {
+    timerElapsed += Date.now() - timerStart_ts;
+  }
+  clearInterval(timerInterval);
+
+  const totalMs  = timerElapsed;
+  const totalHrs = msToHrs(totalMs);
+
+  if (totalHrs < 0.01) {
+    toast('Session too short to save (minimum ~36 seconds).', true);
+    timerReset();
+    return;
+  }
+
+  const subj = document.getElementById('t-subj').value.trim();
+
+  // Save to Firestore
+  await addDoc(collection(db, 'sessions'), {
+    userId:      ME.uid,
+    displayName: ME.displayName,
+    color:       ME.color,
+    subj,
+    hrs:         totalHrs,
+    date:        today(),
+    notes:       'Via timer',
+    logged:      serverTimestamp()
+  });
+
+  toast(`✓ Saved ${fmtH(totalHrs)} of ${subj}`);
+  timerReset();
+  loadTimerHistory();
+};
+
+function timerReset() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerStart_ts = null;
+  timerElapsed  = 0;
+  timerRunning  = false;
+  timerPaused   = false;
+
+  document.getElementById('t-subj').disabled = false;
+  document.getElementById('t-subj').value    = '';
+  document.getElementById('t-display').textContent  = '00:00:00';
+  document.getElementById('t-display').className    = 'timer-display idle';
+  document.getElementById('t-status').textContent   = 'Ready to grind';
+  document.getElementById('t-start-btn').style.display = '';
+  document.getElementById('t-pause-btn').style.display = 'none';
+  document.getElementById('t-stop-btn').style.display  = 'none';
+  document.getElementById('t-pause-btn').textContent   = '⏸ Pause';
+  document.getElementById('t-note').textContent        = '';
+}
+
+async function loadTimerHistory() {
+  const out = document.getElementById('timer-history-out');
+  if (!out) return;
+  // Get today's sessions only
+  const q    = query(collection(db, 'sessions'), where('userId','==',ME.uid), where('date','==',today()), orderBy('logged','desc'));
+  const snap = await getDocs(q);
+  const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (!sessions.length) {
+    out.innerHTML = '<div class="empty"><div class="empty-icon">⏱</div><p>No sessions logged today yet.</p></div>';
+    return;
+  }
+  const todayTotal = sessions.reduce((a, s) => a + s.hrs, 0);
+  out.innerHTML = `
+    <div style="margin-bottom:14px;font-size:0.82rem;color:var(--muted)">
+      Today's total: <span style="color:var(--green);font-weight:700">${fmtH(todayTotal)}</span>
+    </div>
+    <div class="timer-history">
+      ${sessions.map(s => `
+        <div class="timer-hist-item">
+          <div class="session-dot" style="background:${ME.color}"></div>
+          <div style="flex:1">
+            <div class="session-subj">${s.subj}</div>
+            <div class="session-meta">${s.notes || ''}</div>
+          </div>
+          <span class="session-h">${fmtH(s.hrs)}</span>
+          <span class="timer-tag">today</span>
+          <button class="del-btn" onclick="delSession('${s.id}');loadTimerHistory()">✕</button>
+        </div>`).join('')}
+    </div>`;
+}
 
 // ── SESSIONS ───────────────────────────────────────────────────
 window.logSession = async function() {
