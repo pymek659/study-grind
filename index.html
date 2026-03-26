@@ -289,9 +289,32 @@ function hashPW(p){let h=5381;for(let i=0;i<p.length;i++)h=((h<<5)+h)^p.charCode
 function toast(m,e=false){const t=document.getElementById('toast');t.textContent=m;t.className=e?'err show':'show';clearTimeout(t._t);t._t=setTimeout(()=>t.className='',3000)}
 
 // ── STORAGE ──────────────────────────────────────────
-async function sGet(k,sh=false){try{const r=await window.storage.get(k,sh);return r?JSON.parse(r.value):null}catch{return null}}
-async function sSet(k,v,sh=false){try{await window.storage.set(k,JSON.stringify(v),sh);return true}catch{return false}}
-async function sDel(k,sh=false){try{await window.storage.delete(k,sh);return true}catch{return false}}
+async function sGet(k){
+  try{
+    const v = localStorage.getItem(k);
+    return v ? JSON.parse(v) : null;
+  }catch{
+    return null;
+  }
+}
+
+async function sSet(k,v){
+  try{
+    localStorage.setItem(k, JSON.stringify(v));
+    return true;
+  }catch{
+    return false;
+  }
+}
+
+async function sDel(k){
+  try{
+    localStorage.removeItem(k);
+    return true;
+  }catch{
+    return false;
+  }
+}
 
 // ── AUTH ─────────────────────────────────────────────
 function switchTab(t){
